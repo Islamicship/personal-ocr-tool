@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Personal OCR Autofill — Professional</title>
+  <link rel="icon" href="logo.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/moment-hijri@2.1.2/moment-hijri.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <div class="main-content hidden">
+    <header class="topbar">
+      <div class="topbar-left">
+        <img src="logo.png" alt="App Logo" class="logo-img">
+        <h1>OCR Autofill</h1>
+      </div>
+      <div class="header-actions">
+        <button id="logoutBtn" class="secondary">Logout</button>
+        <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
+          <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          <svg id="moonIcon" class="hidden" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="uploader card">
+        <div id="dropZone" class="dropzone" tabindex="0">
+          <input id="fileInput" type="file" accept="image/*" hidden />
+          <div class="drop-content">
+            <img src="" id="previewImg" alt="Image preview" class="preview-img hidden" />
+            <div id="placeholder" class="placeholder">
+              <strong>Ctrl+V / Paste</strong> or drag & drop an image here<br />
+              or <button id="browseBtn" class="link-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                Browse
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="uploader-footer">
+          <div class="hint">High-resolution images give the best OCR results.</div>
+          <div id="status" class="status idle">Idle</div>
+        </div>
+      </section>
+
+      <section class="form card">
+        <div class="form-grid">
+          <div class="col">
+            <label for="aqama">Aqama Number</label>
+            <div class="field-row"><input id="aqama" readonly /><button class="copy-btn" data-target="aqama" aria-label="Copy"></button></div>
+            <label for="fullname">Full Name (CAPITAL)</label>
+            <div class="field-row"><input id="fullname" readonly /><button class="copy-btn" data-target="fullname" aria-label="Copy"></button></div>
+            <label for="fullname_ar">Full Name (Arabic)</label>
+            <div class="field-row"><input id="fullname_ar" readonly /><button class="copy-btn" data-target="fullname_ar" aria-label="Copy"></button></div>
+            <label for="dob_en">Date of Birth (Gregorian)</label>
+            <div class="field-row"><input id="dob_en" placeholder="DD/MM/YYYY" readonly /><button class="copy-btn" data-target="dob_en" aria-label="Copy"></button></div>
+            <label for="nationality_ar">Nationality (Arabic)</label>
+            <div class="field-row"><input id="nationality_ar" readonly /><button class="copy-btn" data-target="nationality_ar" aria-label="Copy"></button></div>
+          </div>
+          <div class="col">
+            <label for="dob_hijri">DOB (Gregorian to Hijri)</label>
+            <div class="field-row"><input id="dob_hijri" placeholder="YYYY/MM/DD" readonly /><button class="copy-btn" data-target="dob_hijri" aria-label="Copy"></button></div>
+            <label for="qrdata">QR Data (Manual Input)</label>
+            <div class="field-row">
+              <input id="qrdata" placeholder="Enter QR data here" />
+              <button id="generateQrBtn" class="secondary qr-gen-btn">Generate</button>
+            </div>
+            <label>QR Image (download)</label>
+            <div class="field-row">
+              <a id="qrDownload" class="primary hidden" download="qr_code.png">Download QR</a>
+              <div id="qrPlaceholder" class="qr-placeholder">—</div>
+            </div>
+            <div class="actions">
+              <button id="copyAll" class="primary">Copy All Fields</button>
+              <button id="retryBtn" class="secondary">Retry OCR</button>
+            </div>
+          </div>
+        </div>
+        <div class="output-card">
+          <h3>Raw OCR / JSON</h3>
+          <pre id="rawOutput" class="raw-output"></pre>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
