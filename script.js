@@ -1,13 +1,14 @@
-// --- Firebase Config and Auth Guard ---
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-    apiKey: "AIzaSyDceJOCGr2Yy9wxZoMknsvLqngIvMAphKE",
-    authDomain: "personal-all-tool-s.firebaseapp.com",
-    projectId: "personal-all-tool-s",
-    storageBucket: "personal-all-tool-s.appspot.com",
-    messagingSenderId: "649061375402",
-    appId: "1:649061375402:web:00d15d42f68ea5d98bdfd3",
-    measurementId: "G-LGM1M06FD8"
+  apiKey: "AIzaSyB-dOcgvW58ydm0yu33bdBmkGLx1rZG_gI",
+  authDomain: "personal-all-tool-s.firebaseapp.com",
+  projectId: "personal-all-tool-s",
+  storageBucket: "personal-all-tool-s.firebasestorage.app",
+  messagingSenderId: "649061375402",
+  appId: "1:649061375402:web:00d15d42f68ea5d98bdfd3",
+  measurementId: "G-LGM1M06FD8"
 };
+
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 auth.onAuthStateChanged(user => {
@@ -15,7 +16,7 @@ auth.onAuthStateChanged(user => {
     else { window.location.href = 'login.html'; }
 });
 
-const API_KEY = "AIzaSyB7piva0Z-_yyOBICT0TJrQCtFmSsZvgbI";
+const API_KEY = "AIzaSyDceJOCGr2Yy9wxZoMknsvLqngIvMAphKE";
 
 const themeToggle = document.getElementById("themeToggle");
 const sunIcon = document.getElementById("sunIcon");
