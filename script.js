@@ -16,7 +16,7 @@ auth.onAuthStateChanged(user => {
     else { window.location.href = 'login.html'; }
 });
 
-const API_KEY = "AIzaSyDceJOCGr2Yy9wxZoMknsvLqngIvMAphKE";
+const API_KEY = "AIzaSyAVPL6usy4q-MSGyV8ezyITdxJ9o9wAfz8";
 
 const themeToggle = document.getElementById("themeToggle");
 const sunIcon = document.getElementById("sunIcon");
@@ -314,4 +314,5 @@ function extractTextFromGeminiResponse(response){
     console.warn("extractTextFromGeminiResponse failed", e);
     return JSON.stringify(response);
   }
+
 }
