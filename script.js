@@ -1,48 +1,15 @@
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyB-dOcgvW58ydm0yu33bdBmkGLx1rZG_gI",
-  authDomain: "personal-all-tool-s.firebaseapp.com",
-  projectId: "personal-all-tool-s",
-  storageBucket: "personal-all-tool-s.firebasestorage.app",
-  messagingSenderId: "649061375402",
-  appId: "1:649061375402:web:00d15d42f68ea5d98bdfd3",
-  measurementId: "G-LGM1M06FD8"
+const API_KEY = "K88675151488957"; 
+
+const fields = {
+  aqama: document.getElementById("aqama"),
+  fullname: document.getElementById("fullname"),
+  fullname_ar: document.getElementById("fullname_ar"),
+  dob_en: document.getElementById("dob_en"),
+  nationality_ar: document.getElementById("nationality_ar"),
+  nationality_en: document.getElementById("nationality_en"),
+  dob_hijri: document.getElementById("dob_hijri"),
+  address: document.getElementById("address")
 };
-
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-auth.onAuthStateChanged(user => {
-    if (user) { document.querySelector('.main-content').classList.remove('hidden'); } 
-    else { window.location.href = 'login.html'; }
-});
-
-const API_KEY = "AIzaSyAALFppCBybfAcR_oM_sKg7GkeNbb8TQtU";
-
-const themeToggle = document.getElementById("themeToggle");
-const sunIcon = document.getElementById("sunIcon");
-const moonIcon = document.getElementById("moonIcon");
-const logoutBtn = document.getElementById('logoutBtn');
-
-function applyTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  if (theme === 'dark') {
-    sunIcon.classList.add('hidden');
-    moonIcon.classList.remove('hidden');
-  } else {
-    sunIcon.classList.remove('hidden');
-    moonIcon.classList.add('hidden');
-  }
-  localStorage.setItem('theme', theme);
-}
-themeToggle.addEventListener('click', () => {
-  const currentTheme = localStorage.getItem('theme') || 'light';
-  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-  applyTheme(newTheme);
-});
-const savedTheme = localStorage.getItem('theme');
-const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-applyTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
-logoutBtn.addEventListener('click', () => { auth.signOut().then(() => { window.location.href = 'login.html'; }); });
 
 const dropZone = document.getElementById("dropZone");
 const fileInput = document.getElementById("fileInput");
@@ -51,23 +18,44 @@ const statusEl = document.getElementById("status");
 const placeholder = document.getElementById("placeholder");
 const previewImg = document.getElementById("previewImg");
 const rawOutput = document.getElementById("rawOutput");
-const generateQrBtn = document.getElementById("generateQrBtn");
-const fields = {
-  aqama: document.getElementById("aqama"),
-  fullname: document.getElementById("fullname"),
-  fullname_ar: document.getElementById("fullname_ar"),
-  dob_en: document.getElementById("dob_en"),
-  dob_hijri: document.getElementById("dob_hijri"),
-  nationality_ar: document.getElementById("nationality_ar"),
-  qrdata: document.getElementById("qrdata"),
-  qrDownload: document.getElementById("qrDownload"),
-  qrPlaceholder: document.getElementById("qrPlaceholder")
-};
+const generateAddressBtn = document.getElementById("generateAddressBtn");
+
+fields.dob_en.addEventListener('input', (e) => { autoFormatDate(e.target); updateHijriDate(); });
+fields.fullname.addEventListener('input', (e) => { e.target.value = e.target.value.replace(/[^a-zA-Z\s]/g, '').toUpperCase(); });
+fields.nationality_en.addEventListener('input', (e) => {
+    const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+    const sentenceCaseValue = value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : "";
+    e.target.value = sentenceCaseValue;
+    const arabicValue = reverseNationalityMap[sentenceCaseValue];
+    if (arabicValue) fields.nationality_ar.value = arabicValue;
+});
+fields.nationality_ar.addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/[^\u0600-\u06FF\s]/g, '');
+    const englishValue = nationalityMap[e.target.value];
+    if (englishValue) fields.nationality_en.value = englishValue;
+});
+fields.fullname_ar.addEventListener('input', (e) => { e.target.value = e.target.value.replace(/[^\u0600-\u06FF\s]/g, ''); });
+fields.aqama.addEventListener('input', (e) => {
+    let userInput = e.target.value.replace(/\D/g, '');
+    if (userInput.startsWith('2')) userInput = userInput.substring(1);
+    const limitedInput = userInput.slice(0, 10); 
+    e.target.value = '2' + limitedInput;
+});
+fields.dob_hijri.addEventListener('input', (e) => { autoFormatDate(e.target, true); });
+generateAddressBtn.addEventListener('click', generateRandomAddress);
+
+browseBtn.addEventListener("click", () => fileInput.click());
+fileInput.addEventListener("change", (e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); });
+dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener("dragleave", () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener("drop", (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files?.[0]) handleFile(e.dataTransfer.files[0]); });
+dropZone.addEventListener("click", (e) => { if (e.target === dropZone || e.target.parentElement === placeholder) fileInput.click(); });
+window.addEventListener("paste", (e) => { const items = e.clipboardData?.items || []; for (const it of items) { if (it.type?.startsWith("image/")) { const blob = it.getAsFile(); if (blob) handleFile(blob); return; } } });
 
 document.querySelectorAll(".copy-btn").forEach(btn => {
   btn.addEventListener("click", () => {
-    const t = btn.getAttribute("data-target");
-    copyText((fields[t] && fields[t].value) || "");
+    const targetId = btn.getAttribute("data-target");
+    copyText(fields[targetId]?.value || "");
   });
 });
 
@@ -79,7 +67,8 @@ Name (Arabic): ${fields.fullname_ar.value}
 DOB (Gregorian): ${fields.dob_en.value}
 DOB (Hijri): ${fields.dob_hijri.value}
 Nationality (Arabic): ${fields.nationality_ar.value}
-QR: ${fields.qrdata.value}
+Nationality (English): ${fields.nationality_en.value}
+Address: ${fields.address.value}
   `.trim();
   copyText(combined);
 });
@@ -88,31 +77,6 @@ document.getElementById("retryBtn").addEventListener("click", async () => {
   if (!previewImg.src || previewImg.src === window.location.href) return alert("Please upload or paste an image first.");
   await processDataUrl(previewImg.src);
 });
-
-generateQrBtn.addEventListener('click', () => {
-    let userInput = fields.qrdata.value.trim();
-    if (!userInput) { alert("Please enter data in the QR Data field first."); return; }
-    if (!userInput.toUpperCase().endsWith(';BAHAWALPUR;')) { userInput += ';BAHAWALPUR;'; }
-    fields.qrdata.value = userInput;
-    status("Generating QR Code...", "processing");
-    const qrImgData = generateFixedSizeQRCode(userInput);
-    if (qrImgData) {
-        fields.qrDownload.href = qrImgData;
-        fields.qrDownload.classList.remove("hidden");
-        fields.qrPlaceholder.textContent = "QR ready for download!";
-        status("QR Code Generated.", "done");
-    } else {
-        status("Failed to generate QR Code.", "error");
-    }
-});
-
-browseBtn.addEventListener("click", () => fileInput.click());
-fileInput.addEventListener("change", async (ev) => { if (ev.target.files?.[0]) await handleFile(ev.target.files[0]); });
-dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add('dragover') });
-dropZone.addEventListener("dragleave", e => { dropZone.classList.remove('dragover') });
-dropZone.addEventListener("drop", async (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files?.[0]) await handleFile(e.dataTransfer.files[0]); });
-dropZone.addEventListener("click", (e) => { if (e.target === dropZone || e.target.parentElement === placeholder) { fileInput.click(); } });
-window.addEventListener("paste", async (e) => { const items = e.clipboardData?.items || []; for (const it of items) { if (it.type?.startsWith("image/")) { const blob = it.getAsFile(); if (blob) await handleFile(blob); return; } } });
 
 async function handleFile(file) {
   try {
@@ -124,10 +88,193 @@ async function handleFile(file) {
     placeholder.classList.add("hidden");
     await processDataUrl(dataUrl);
   } catch (err) {
-    console.error(err);
     status("Failed to read file.", "error");
     alert("Could not read the image file. Try another image.");
   }
+}
+
+async function processDataUrl(dataUrl) {
+  try {
+    status("Calling OCR API...", "processing");
+    const parsedData = await callOcrSpaceAPI(dataUrl);
+    
+    fields.aqama.value = parsedData.aqama_number;
+    fields.fullname.value = parsedData.full_name_capital;
+    fields.fullname_ar.value = parsedData.full_name_arabic;
+    fields.dob_en.value = parsedData.dob_english;
+    fields.nationality_ar.value = parsedData.nationality_arabic;
+    fields.nationality_en.value = parsedData.nationality_english;
+
+    updateHijriDate();
+    generateRandomAddress();
+
+    status("Done. Please review and verify the fields.", "done");
+  } catch (err) {
+    status("Error: " + err.message, "error");
+    rawOutput.textContent = String(err);
+  }
+}
+
+async function callOcrSpaceAPI(dataUrl) {
+  const formData = new FormData();
+  formData.append('base64Image', dataUrl);
+  formData.append('apikey', API_KEY);
+  formData.append('language', 'ara');
+  formData.append('detectOrientation', 'true');
+  formData.append('scale', 'true');
+  
+  const resp = await fetch('https://api.ocr.space/parse/image', {
+    method: 'POST',
+    body: formData
+  });
+
+  if (!resp.ok) throw new Error(`OCR.space API error ${resp.status}`);
+  const result = await resp.json();
+  if (result.IsErroredOnProcessing || !result.ParsedResults?.[0]) {
+    throw new Error(result.ErrorMessage?.join(', ') || 'Failed to parse image with OCR.space');
+  }
+
+  const rawText = result.ParsedResults[0].ParsedText;
+  rawOutput.textContent = rawText; 
+  return parseOcrText(rawText);
+}
+
+function convertArabicDigitsToEnglish(str) {
+    if (!str) return "";
+    return str.replace(/[٠١٢٣٤٥٦٧٨٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+              .replace(/[۰۱۲۳۴۵۶۷۸۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
+}
+
+const nationalityMap = {
+    'الهند': 'India',
+    'باكستان': 'Pakistan',
+    'بنجلاديش': 'Bangladesh',
+    'مصر': 'Egypt',
+    'السودان': 'Sudan'
+};
+const reverseNationalityMap = {};
+for (const key in nationalityMap) {
+    reverseNationalityMap[nationalityMap[key]] = key;
+}
+
+const addressTemplates = {
+    Pakistan: [ "House #{house}, Street #{street}, Sector {sector}, {city}, Pakistan" ],
+    India: [ "#{house}/#{street}, {area}, {city}, {state}, India" ],
+    Bangladesh: [ "House #{house}, Road #{road}, Block {block}, {area}, Dhaka, Bangladesh" ],
+    Default: [ "123 Example Street, Main City, Country" ]
+};
+
+const addressData = {
+    Pakistan: { city: ["Karachi", "Lahore", "Islamabad"], sector: ["F-7", "G-10"], block: ["A", "B"] },
+    India: { city: ["Mumbai", "Delhi"], state: ["Maharashtra", "Delhi"], area: ["Andheri", "Connaught Place"], street: ["10", "12"] },
+    Bangladesh: { area: ["Gulshan", "Banani"], district: ["Dhaka", "Chittagong"], block: ["A", "B"], road: ["5", "7"] }
+};
+
+function getRandomElement(arr) {
+    if (!arr || arr.length === 0) return ""; 
+    return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function generateRandomAddress() {
+    const country = fields.nationality_en.value || "Default";
+    const templates = addressTemplates[country] || addressTemplates.Default;
+    const data = addressData[country] || {}; 
+    
+    let template = getRandomElement(templates);
+    
+    template = template.replace(/{city}/g, getRandomElement(data.city || ["Main City"]));
+    template = template.replace(/{sector}/g, getRandomElement(data.sector || ["Sector X"]));
+    template = template.replace(/{block}/g, getRandomElement(data.block || ["Block Z"]));
+    template = template.replace(/{area}/g, getRandomElement(data.area || ["Central Area"]));
+    template = template.replace(/{state}/g, getRandomElement(data.state || ["Main State"]));
+    template = template.replace(/#{house}/g, Math.floor(Math.random() * 900) + 100);
+    template = template.replace(/#{street}/g, Math.floor(Math.random() * 50) + 1);
+    template = template.replace(/#{road}/g, Math.floor(Math.random() * 20) + 1);
+
+    fields.address.value = template;
+}
+
+function parseOcrText(text) {
+  const englishText = convertArabicDigitsToEnglish(text);
+  const lines = englishText.split('\n').map(line => line.trim()).filter(line => line);
+  
+  const data = {
+    aqama_number: "",
+    full_name_capital: "",
+    full_name_arabic: "",
+    dob_english: "",
+    nationality_arabic: "",
+    nationality_english: ""
+  };
+
+  const nameEnRegExp = /^[A-Z\s]{8,}$/;
+  const nameArRegExp = /^[\u0600-\u06FF\s]+$/;
+
+  for (const key in nationalityMap) {
+    if (englishText.includes(key)) {
+        data.nationality_arabic = key;
+        data.nationality_english = nationalityMap[key];
+        break;
+    }
+  }
+
+  lines.forEach(line => {
+    if (line.includes('الهوية') || line.includes('الهويه')) {
+      const match = line.match(/\b2\d{9,10}\b/);
+      if (match) data.aqama_number = match[0];
+    }
+    else if (line.includes('الميلاد')) {
+      let cleanedLine = line.replace(/[^\d\/\.-]/g, ''); 
+      const match = cleanedLine.match(/(\d{1,4})[\/.-](\d{1,2})[\/.-](\d{1,4})/);
+      if (match) {
+        let part1 = match[1], part2 = match[2], part3 = match[3];
+        let day, month, year;
+        if (part1.length === 4) { [year, month, day] = [part1, part2, part3]; }
+        else { [day, month, year] = [part1, part2, part3]; }
+        if (year.length === 2) {
+          year = (parseInt(year) > 30) ? '19' + year : '20' + year; 
+        }
+        data.dob_english = `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+      }
+    }
+  });
+
+  const foundEnglishNameLine = lines.find(line => nameEnRegExp.test(line));
+  if (foundEnglishNameLine) {
+    const nameParts = foundEnglishNameLine.split(' ').filter(p => p);
+    data.full_name_capital = (nameParts.length > 1) ? nameParts.reverse().join(' ') : foundEnglishNameLine;
+  }
+
+  const potentialArNames = lines.filter(line => 
+      line.length > 5 && nameArRegExp.test(line) && !line.includes(data.nationality_arabic)
+  );
+  if (potentialArNames.length > 0) {
+      data.full_name_arabic = potentialArNames[0];
+  }
+  
+  return data;
+}
+
+function updateHijriDate() {
+    const gregorianDate = fields.dob_en.value;
+    if (gregorianDate && moment(gregorianDate, 'DD/MM/YYYY', true).isValid()) {
+        const hijriDate = moment(gregorianDate, 'DD/MM/YYYY').format('iYYYY/iMM/iDD');
+        fields.dob_hijri.value = hijriDate;
+    } else {
+        fields.dob_hijri.value = "";
+    }
+}
+
+function autoFormatDate(input, isHijri = false) {
+    let value = input.value.replace(/\D/g, '');
+    if (isHijri) { 
+        if (value.length > 4) value = value.slice(0, 4) + '/' + value.slice(4);
+        if (value.length > 7) value = value.slice(0, 7) + '/' + value.slice(7, 9);
+    } else { 
+        if (value.length > 2) value = value.slice(0, 2) + '/' + value.slice(2);
+        if (value.length > 5) value = value.slice(0, 5) + '/' + value.slice(5, 9);
+    }
+    input.value = value;
 }
 
 function fileToDataUrl(file) {
@@ -147,173 +294,14 @@ function status(txt, state = 'idle') {
 async function copyText(text) {
   if (!text) return;
   try { await navigator.clipboard.writeText(text); } 
-  catch (e) {
-    const t = document.createElement("textarea");
-    t.value = text; document.body.appendChild(t);
-    t.select(); document.execCommand('copy'); document.body.removeChild(t);
-  }
+  catch (e) {  }
 }
 
 function resetFields() {
-  Object.values(fields).forEach(f => { if (f?.tagName === "INPUT") f.value = ""; });
-  fields.qrPlaceholder.textContent = "—";
-  fields.qrDownload.classList.add("hidden");
+  const fieldsToReset = ['aqama', 'fullname', 'fullname_ar', 'dob_en', 'nationality_ar', 'nationality_en', 'dob_hijri', 'address'];
+  fieldsToReset.forEach(id => {
+      if (fields[id]) fields[id].value = "";
+  });
   rawOutput.textContent = "";
   status("Idle", "idle");
 }
-
-function convertArabicDigitsToEnglish(str) {
-    if (!str) return "";
-    return str.replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
-              .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
-}
-
-async function processDataUrl(dataUrl) {
-  try {
-    status("Decoding QR locally...", "processing");
-    const qrText = await tryDecodeQR(dataUrl);
-    if (qrText) { fields.qrdata.value = qrText; fields.qrPlaceholder.textContent = "QR detected"; } 
-    else { fields.qrPlaceholder.textContent = "No QR detected"; }
-
-    if (!API_KEY || API_KEY.includes("YAHAN")) { status("API key missing", "error"); return; }
-
-    status("Calling Google AI...", "processing");
-    const jsonResult = await callGeminiForOCR(dataUrl);
-    rawOutput.textContent = JSON.stringify(jsonResult, null, 2);
-
-    fields.aqama.value = jsonResult.aqama_number || "";
-    fields.fullname.value = (jsonResult.full_name_capital || "").toUpperCase();
-    fields.fullname_ar.value = jsonResult.full_name_arabic || "";
-    fields.dob_en.value = jsonResult.dob_english || "";
-    fields.nationality_ar.value = jsonResult.nationality_arabic || "";
-
-    const gregorianDateRaw = jsonResult.dob_english || "";
-    if (gregorianDateRaw) {
-        const gregorianDateStr = convertArabicDigitsToEnglish(gregorianDateRaw).trim();
-        let hijriDate = "Invalid Date";
-        
-        if (moment(gregorianDateStr, 'DD/MM/YYYY', true).isValid()) {
-            hijriDate = moment(gregorianDateStr, 'DD/MM/YYYY').format('iYYYY/iMM/iDD');
-        } else if (moment(gregorianDateStr, 'YYYY/MM/DD', true).isValid()) {
-            hijriDate = moment(gregorianDateStr, 'YYYY/MM/DD').format('iYYYY/iMM/iDD');
-        }
-        fields.dob_hijri.value = hijriDate;
-    } else {
-        fields.dob_hijri.value = "";
-    }
-
-    if (jsonResult.qr_data && !fields.qrdata.value) { fields.qrdata.value = jsonResult.qr_data || ""; }
-    status("Done", "done");
-  } catch (err) {
-    console.error(err);
-    status("Error: " + err.message, "error");
-    rawOutput.textContent = String(err);
-  }
-}
-
-async function tryDecodeQR(dataUrl){
-  try {
-    const img = new Image();
-    img.src = dataUrl;
-    await img.decode();
-    const w = img.naturalWidth, h = img.naturalHeight;
-    const canvas = document.createElement("canvas");
-    canvas.width = w; canvas.height = h;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(img,0,0);
-    const imgData = ctx.getImageData(0,0,w,h);
-    const code = jsQR(imgData.data, w, h);
-    if(code?.data) return code.data;
-  } catch (e) { console.warn("jsQR decode failed", e); }
-  return null;
-}
-
-function generateFixedSizeQRCode(text) {
-  try {
-    const typeNumber = 0; 
-    const errorCorrectionLevel = 'L';
-    const qr = qrcode(typeNumber, errorCorrectionLevel);
-    qr.addData(text);
-    qr.make();
-    const moduleCount = qr.getModuleCount();
-    const finalSize = 105;
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = moduleCount;
-    tempCanvas.height = moduleCount;
-    const tempCtx = tempCanvas.getContext('2d');
-    for (let row = 0; row < moduleCount; row++) {
-      for (let col = 0; col < moduleCount; col++) {
-        tempCtx.fillStyle = qr.isDark(row, col) ? '#000000' : '#ffffff';
-        tempCtx.fillRect(col, row, 1, 1);
-      }
-    }
-    const finalCanvas = document.createElement('canvas');
-    finalCanvas.width = finalSize;
-    finalCanvas.height = finalSize;
-    const finalCtx = finalCanvas.getContext('2d');
-    finalCtx.imageSmoothingEnabled = false;
-    finalCtx.drawImage(tempCanvas, 0, 0, moduleCount, moduleCount, 0, 0, finalSize, finalSize);
-    return finalCanvas.toDataURL('image/png');
-  } catch (e) {
-    console.warn("QR generation error", e);
-    return null;
-  }
-}
-
-async function callGeminiForOCR(dataUrl){
-  const base64 = dataUrl.split(",")[1];
-  const promptText = `You are an expert OCR system. Extract information from the provided ID card image and return ONLY a valid JSON object.
-
-FIELDS TO EXTRACT:
-1. "aqama_number": The ID number (digits only).
-2. "full_name_capital": The name in English, in ALL CAPS.
-3. "full_name_arabic": The name in Arabic script.
-4. "dob_english": The Gregorian date of birth in DD/MM/YYYY format.
-5. "nationality_arabic": The nationality in Arabic script (e.g., "باكستان").
-6. "qr_data": Any data found inside a QR code.
-
-EXAMPLE JSON OUTPUT:
-{
-  "aqama_number": "2568702043",
-  "full_name_capital": "SHER ALAM MUHAMMAD RAZIQ",
-  "full_name_arabic": "شير علام محمد رازيك",
-  "dob_english": "01/01/1982",
-  "nationality_arabic": "باكستان",
-  "qr_data": ""
-}
-
-RULES:
-- If a field is not found, its value must be an empty string "".
-- Your entire response must be ONLY the JSON object, with no extra text, explanations, or markdown formatting.`;
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
-  const body = {
-    contents: [{ parts: [{ text: promptText }, { inline_data: { mime_type: "image/png", data: base64 } }] }],
-    generationConfig: { temperature: 0.0, maxOutputTokens: 1024 }
-  };
-  const resp = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!resp.ok) { const text = await resp.text(); throw new Error(`API error ${resp.status}: ${text}`); }
-  const data = await resp.json();
-  const rawText = extractTextFromGeminiResponse(data);
-  try {
-    return JSON.parse(rawText);
-  } catch (e) {
-    const match = rawText.match(/\{[\s\S]*\}/);
-    if (match) {
-      try { return JSON.parse(match[0]); }
-      catch (ex) { throw new Error("Failed to parse JSON from model output."); }
-    }
-    throw new Error("Model output did not contain valid JSON.");
-  }
-}
-
-function extractTextFromGeminiResponse(response){
-  try {
-    return response.candidates[0].content.parts[0].text;
-  } catch (e) {
-    console.warn("extractTextFromGeminiResponse failed", e);
-    return JSON.stringify(response);
-  }
-
-}
-
